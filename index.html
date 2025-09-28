@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abang - Track Modern Jeepneys in Real-Time</title>
+    <meta name="description" content="Abang is a ride-tracking platform that allows passengers to track modern jeepneys in real-time. Download the app and never miss your ride again.">
+    
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#007AFF',
+                        'primary-dark': '#0056CC',
+                        'primary-light': '#E6F3FF',
+                        gray: {
+                            50: '#F9FAFB',
+                            100: '#F3F4F6',
+                            200: '#E5E7EB',
+                            300: '#D1D5DB',
+                            400: '#9CA3AF',
+                            500: '#6B7280',
+                            600: '#4B5563',
+                            700: '#374151',
+                            800: '#1F2937',
+                            900: '#111827'
+                        }
+                    },
+                    fontFamily: {
+                        'system': ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        'soft-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        'soft-xl': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                    },
+                    borderRadius: {
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                        '3xl': '2rem'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        .hero-map {
+            background: 
+                linear-gradient(rgba(0, 122, 255, 0.7), rgba(102, 126, 234, 0.8)),
+                url('img/Gemini_Generated_Image_bc6bp9bc6bp9bc6b.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            position: relative;
+        }
+        
+        .hero-map::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                /* Map grid pattern */
+                linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px, 50px 50px;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        .app-icon {
+            background: linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%);
+        }
+        
+        .section-divider {
+            background: linear-gradient(90deg, transparent 0%, #E5E7EB 50%, transparent 100%);
+        }
+        
+        .btn-primary {
+            background-color: #007AFF;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056CC;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(0, 122, 255, 0.3);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 5px 15px rgba(0, 122, 255, 0.3);
+        }
+        
+        /* Skeleton Loading Styles */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+        
+        .skeleton-text {
+            height: 1rem;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .skeleton-text.large {
+            height: 2rem;
+        }
+        
+        .skeleton-text.small {
+            height: 0.75rem;
+        }
+        
+        .skeleton-circle {
+            border-radius: 50%;
+        }
+        
+        .skeleton-card {
+            border-radius: 1.5rem;
+            height: 200px;
+        }
+        
+        .content-loaded {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Map Animation */
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        .jeepney-marker {
+            transform-origin: center;
+        }
+        
+        /* Custom Leaflet Map Styles */
+        .custom-jeepney-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+        
+        .custom-driver-marker {
+            border-radius: 50% !important;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+            border: 3px solid white !important;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        .leaflet-popup-tip {
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-system">
+    <!-- Navigation -->
+    <nav class="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <img src="img/logo/logo.png" alt="Abang Logo" class="w-10 h-10 rounded-2xl mr-3">
+                    <span class="text-xl font-semibold text-gray-900">Abang</span>
+                </div>
+                <div class="hidden md:flex space-x-4">
+                    <a href="#mission" class="text-gray-600 hover:text-primary transition-colors text-sm">Mission</a>
+                    <a href="#vision" class="text-gray-600 hover:text-primary transition-colors text-sm">Vision</a>
+                    <a href="#story" class="text-gray-600 hover:text-primary transition-colors text-sm">Our Story</a>
+                    <a href="#technology" class="text-gray-600 hover:text-primary transition-colors text-sm">Technology</a>
+                    <a href="#partners" class="text-gray-600 hover:text-primary transition-colors text-sm">Partners</a>
+                    <a href="#map-demo" class="text-gray-600 hover:text-primary transition-colors text-sm">Live Demo</a>
+                    <a href="#sdg-impact" class="text-gray-600 hover:text-primary transition-colors text-sm">SDG Impact</a>
+                    <a href="#team" class="text-gray-600 hover:text-primary transition-colors text-sm">Team</a>
+                    <a href="#download" class="text-gray-600 hover:text-primary transition-colors text-sm">Download</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-map py-20 lg:py-32">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <img src="img/logo/logo.png" alt="Abang Logo" class="w-20 h-20 rounded-3xl mx-auto mb-8 shadow-soft-lg">
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+                Track Your Ride<br>
+                <span class="text-blue-200">in Real-Time</span>
+            </h1>
+            <p class="text-xl text-blue-100 mb-8 max-w-2xl mx-auto leading-relaxed">
+                Never wait in uncertainty again. Abang helps you track modern jeepneys in real-time, 
+                making your daily commute predictable and stress-free.
+            </p>
+            <a href="" target="_blank" rel="noopener noreferrer" class="btn-primary text-white px-8 py-4 rounded-2xl font-semibold text-lg inline-flex items-center shadow-soft-lg">
+                Get Abang
+                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+            </a>
+        </div>
+    </section>
+
+    <!-- Mission Section -->
+    <section id="mission" class="py-20 bg-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">Our Mission</h2>
+            <div class="section-divider h-px w-20 mx-auto mb-8"></div>
+            <p class="text-xl text-gray-600 leading-relaxed">
+                To revolutionize public transportation by providing real-time tracking solutions 
+                that empower commuters with reliable, accurate information about modern jeepney routes, 
+                reducing wait times and improving the overall travel experience for Filipino communities.
+            </p>
+        </div>
+    </section>
+
+    <!-- Vision Section -->
+    <section id="vision" class="py-20 bg-gray-50">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">Our Vision</h2>
+            <div class="section-divider h-px w-20 mx-auto mb-8"></div>
+            <p class="text-xl text-gray-600 leading-relaxed">
+                A future where every Filipino commuter has access to smart, connected public transportation. 
+                We envision communities where modern jeepneys are seamlessly integrated with technology, 
+                creating efficient, sustainable, and passenger-friendly transit systems that serve as the 
+                backbone of urban mobility.
+            </p>
+        </div>
+    </section>
+
+    <!-- Story Section -->
+    <section id="story" class="py-20 bg-white">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">The Story Behind Abang</h2>
+                <div class="section-divider h-px w-20 mx-auto"></div>
+            </div>
+            
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6">
+                    <h3 class="text-2xl font-semibold text-gray-900">Born from Daily Frustration</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        Every day, millions of Filipinos stand at jeepney stops, wondering when their ride will arrive. 
+                        The uncertainty creates stress, wastes time, and affects productivity. Our team experienced this 
+                        firsthand during our daily commutes.
+                    </p>
+                    <p class="text-gray-600 leading-relaxed">
+                        We realized that while modern jeepneys are equipped with GPS technology, passengers had no way 
+                        to access this information. The solution seemed obvious: bridge the gap between the technology 
+                        already in vehicles and the people who need it most.
+                    </p>
+                    <p class="text-gray-600 leading-relaxed">
+                        Abang was born from this simple yet powerful idea. By connecting passengers to real-time vehicle 
+                        locations, we're not just building an app – we're creating peace of mind for every commuter who 
+                        chooses public transportation.
+                    </p>
+                </div>
+                
+                <div class="bg-gradient-to-br from-primary-light to-blue-50 p-8 rounded-3xl">
+                    <div class="text-center">
+                        <div class="app-icon w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <span class="text-white font-bold text-2xl">A</span>
+                        </div>
+                        <h4 class="text-xl font-semibold text-gray-900 mb-4">The Problem We Solve</h4>
+                        <ul class="text-gray-600 space-y-3">
+                            <li class="flex items-center">
+                                <svg class="w-5 h-5 text-primary mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Uncertain wait times
+                            </li>
+                            <li class="flex items-center">
+                                <svg class="w-5 h-5 text-primary mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Missed connections
+                            </li>
+                            <li class="flex items-center">
+                                <svg class="w-5 h-5 text-primary mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Wasted time and stress
+                            </li>
+                            <li class="flex items-center">
+                                <svg class="w-5 h-5 text-primary mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Unpredictable commutes
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technology Stack Section -->
+    <section id="technology" class="py-20 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">Built with Modern Technology</h2>
+                <div class="section-divider h-px w-20 mx-auto mb-8 bg-gradient-to-r from-blue-500 to-purple-500"></div>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                    Abang is powered by cutting-edge technologies that ensure reliability, scalability, and an exceptional user experience.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+                <!-- React Native + Expo Card -->
+                <div class="bg-gradient-to-br from-white to-blue-50 rounded-3xl p-8 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-2 border border-blue-100">
+                    <div class="w-20 h-20 mx-auto mb-6 flex items-center justify-center space-x-2">
+                        <!-- React Native Logo -->
+                        <div class="w-8 h-8 flex items-center justify-center">
+                            <img src="img/logo/React-icon.svg.png" alt="React Native Logo" class="w-full h-full object-contain">
+                        </div>
+                        <!-- Plus Icon -->
+                        <div class="w-6 h-6 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/>
+                            </svg>
+                        </div>
+                        <!-- Expo Logo -->
+                        <div class="w-8 h-8 flex items-center justify-center">
+                            <img src="img/logo/expo.png" alt="Expo Logo" class="w-full h-full object-contain">
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3">React Native with Expo</h3>
+                    <p class="text-gray-600 leading-relaxed mb-4">
+                        Cross-platform mobile development that delivers native performance on both iOS and Android devices with a single codebase.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">React Native</span>
+                        <span class="px-3 py-1 bg-cyan-100 text-cyan-700 rounded-full text-sm font-medium">Expo</span>
+                        <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">JavaScript</span>
+                    </div>
+                </div>
+
+                <!-- Supabase Card -->
+                <div class="bg-gradient-to-br from-white to-green-50 rounded-3xl p-8 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-2 border border-green-100">
+                    <div class="w-20 h-20 mx-auto mb-6 flex items-center justify-center bg-white rounded-2xl shadow-soft border-2 border-green-200">
+                        <img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/supabase.png" alt="Supabase Logo" class="w-12 h-12 object-contain">
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Supabase</h3>
+                    <p class="text-gray-600 leading-relaxed mb-4">
+                        Open-source Firebase alternative providing real-time database, authentication, and instant APIs for seamless backend operations.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">PostgreSQL</span>
+                        <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">Real-time</span>
+                        <span class="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm font-medium">Auth</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+            <!-- Additional Tech Info -->
+            <div class="mt-16 bg-gradient-to-r from-white via-purple-50 to-indigo-50 rounded-3xl p-8 shadow-soft max-w-4xl mx-auto border border-purple-100">
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-4">Why These Technologies?</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        Our technology stack is carefully selected to ensure Abang delivers the best possible experience for both passengers and drivers.
+                    </p>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="space-y-4 bg-white rounded-2xl p-6 shadow-soft border-l-4 border-primary">
+                        <h4 class="text-lg font-semibold text-gray-900 flex items-center">
+                            <div class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mr-3">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                            </div>
+                            Performance & Speed
+                        </h4>
+                        <ul class="text-gray-600 space-y-2 ml-11">
+                            <li>• Native mobile performance with React Native</li>
+                            <li>• Real-time data synchronization with Supabase</li>
+                            <li>• Google Maps integration for accurate GPS tracking</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="space-y-4 bg-white rounded-2xl p-6 shadow-soft border-l-4 border-green-500">
+                        <h4 class="text-lg font-semibold text-gray-900 flex items-center">
+                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            Reliability & Security
+                        </h4>
+                        <ul class="text-gray-600 space-y-2 ml-11">
+                            <li>• Secure authentication and data protection</li>
+                            <li>• Scalable infrastructure for growing user base</li>
+                            <li>• Cross-platform compatibility and consistency</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Partners Section -->
+    <section id="partners" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">Our Partners</h2>
+                <div class="section-divider h-px w-20 mx-auto mb-8"></div>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                    Working together with transportation cooperatives to revolutionize public transit in the Philippines.
+                </p>
+            </div>
+
+            <div class="max-w-4xl mx-auto">
+                <!-- SJJDO Partnership Card -->
+                <div class="bg-gradient-to-br from-primary-light to-blue-50 rounded-3xl p-8 lg:p-12 shadow-soft-lg">
+                    <div class="grid lg:grid-cols-2 gap-8 items-center">
+                        <!-- Partner Info -->
+                        <div>
+                            <div class="flex items-center mb-6">
+                                <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mr-4 shadow-soft p-2">
+                                    <img src="img/logo/sjjdo-logo.png" alt="SJJDO Logo" class="w-full h-full object-contain">
+                                </div>
+                                <div>
+                                    <h3 class="text-2xl font-bold text-gray-900">SJJDO</h3>
+                                    <p class="text-primary font-medium">Jeepney Cooperative</p>
+                                </div>
+                            </div>
+                            
+                            <p class="text-gray-700 leading-relaxed mb-6">
+                                San Jose Jeepney Drivers Organization (SJJDO) is our key transportation partner, 
+                helping us bring real-time tracking technology to modern jeepneys and improve the commuting 
+                experience for thousands of passengers daily.
+                            </p>
+                            
+                            <!-- President Info -->
+                            <div class="bg-white rounded-2xl p-6 shadow-soft">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center mr-4">
+                                        <span class="text-white font-bold text-lg">RT</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-lg font-semibold text-gray-900">Reynante Tadeo</h4>
+                                        <p class="text-gray-600 text-sm">Cooperative President</p>
+                                    </div>
+                                </div>
+                                <p class="text-gray-600 text-sm mt-4 leading-relaxed">
+                                    "Partnering with Abang helps us provide better service to our passengers. 
+                                    Real-time tracking makes our operations more efficient and reliable."
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Partnership Benefits -->
+                        <div class="space-y-6">
+                            <h4 class="text-xl font-semibold text-gray-900">Partnership Benefits</h4>
+                            
+                            <div class="space-y-4">
+                                <div class="flex items-start">
+                                    <div class="bg-green-100 rounded-xl p-2 mr-4 mt-1">
+                                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900 mb-1">Improved Passenger Experience</h5>
+                                        <p class="text-gray-600 text-sm">Real-time tracking reduces wait times and uncertainty for commuters</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-start">
+                                    <div class="bg-blue-100 rounded-xl p-2 mr-4 mt-1">
+                                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900 mb-1">Operational Efficiency</h5>
+                                        <p class="text-gray-600 text-sm">Better route management and vehicle utilization through data insights</p>
+                                    </div>
+                                </div>
+                                
+                             
+                                
+                                <div class="flex items-start">
+                                    <div class="bg-orange-100 rounded-xl p-2 mr-4 mt-1">
+                                        <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900 mb-1">Technology Innovation</h5>
+                                        <p class="text-gray-600 text-sm">Leading the modernization of public transportation in the Philippines</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+       
+        
+            </div>
+        </div>
+    </section>
+
+    <!-- Map Demo Section -->
+    <section id="map-demo" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">Real-Time Tracking</h2>
+                <div class="section-divider h-px w-20 mx-auto mb-8"></div>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                    See how Abang tracks modern jeepneys in real-time using advanced GPS technology. 
+                    Our interactive map shows live vehicle locations and route information.
+                </p>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <!-- Map Card -->
+                <div class="bg-white rounded-3xl shadow-soft-lg overflow-hidden border border-gray-100">
+                    <div class="bg-gradient-to-r from-primary to-blue-600 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-white font-semibold text-lg">Live Jeepney Tracking</h3>
+                                <p class="text-blue-100 text-sm">Powered by OpenRouteService</p>
+                            </div>
+                            <div class="bg-white/20 rounded-full p-2">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Container -->
+                    <div class="relative">
+                        <div id="map-container" class="h-80 bg-gray-100 relative overflow-hidden">
+                            <!-- Map Loading Skeleton -->
+                            <div id="map-skeleton" class="absolute inset-0 bg-gray-200">
+                                <div class="animate-pulse h-full">
+                                    <div class="skeleton w-full h-full"></div>
+                                    <!-- Floating route cards skeleton -->
+                                    <div class="absolute top-4 left-4 bg-white rounded-xl p-3 shadow-soft">
+                                        <div class="skeleton w-20 h-4 mb-2"></div>
+                                        <div class="skeleton w-16 h-3"></div>
+                                    </div>
+                                    <div class="absolute top-4 right-4 bg-white rounded-xl p-3 shadow-soft">
+                                        <div class="skeleton w-24 h-4 mb-2"></div>
+                                        <div class="skeleton w-18 h-3"></div>
+                                    </div>
+                                    <div class="absolute bottom-4 left-4 bg-white rounded-xl p-3 shadow-soft">
+                                        <div class="skeleton w-22 h-4 mb-2"></div>
+                                        <div class="skeleton w-20 h-3"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Actual Map (will be loaded via JavaScript) -->
+                            <div id="openroute-map" class="w-full h-full hidden z-10"></div>
+                            
+                            <!-- Demo Overlay (Static Demo) -->
+                            <div id="map-demo-overlay" class="absolute inset-0 bg-gradient-to-br from-blue-50 to-green-50 hidden">
+                                <!-- Demo Map Grid -->
+                                <div class="absolute inset-0 opacity-20">
+                                    <div class="grid grid-cols-8 grid-rows-6 h-full">
+                                        <div class="border border-gray-300"></div>
+                                        <div class="border border-gray-300"></div>
+                                        <div class="border border-gray-300"></div>
+                                        <div class="border border-gray-300"></div>
+                                        <div class="border border-gray-300"></div>
+                                        <div class="border border-gray-300"></div>
+                                        <div class="border border-gray-300"></div>
+                                        <div class="border border-gray-300"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Demo Routes -->
+                                <svg class="absolute inset-0 w-full h-full" viewBox="0 0 400 320">
+                                    <!-- Route Lines -->
+                                    <path d="M50 50 Q150 100 250 80 T350 120" stroke="#007AFF" stroke-width="3" fill="none" opacity="0.8"/>
+                                    <path d="M30 200 Q120 150 200 180 T320 160" stroke="#34D399" stroke-width="3" fill="none" opacity="0.8"/>
+                                    <path d="M80 280 Q180 240 280 250 T380 220" stroke="#F59E0B" stroke-width="3" fill="none" opacity="0.8"/>
+                                    
+                                    <!-- Jeepney Icons (animated) -->
+                                    <g class="jeepney-marker" transform="translate(150,85)">
+                                        <circle cx="0" cy="0" r="8" fill="#007AFF"/>
+                                        <circle cx="0" cy="0" r="4" fill="white"/>
+                                        <text x="0" y="25" text-anchor="middle" class="text-xs font-semibold fill-primary">Route 1</text>
+                                    </g>
+                                    <g class="jeepney-marker" transform="translate(200,175)">
+                                        <circle cx="0" cy="0" r="8" fill="#34D399"/>
+                                        <circle cx="0" cy="0" r="4" fill="white"/>
+                                        <text x="0" y="25" text-anchor="middle" class="text-xs font-semibold fill-green-600">Route 2</text>
+                                    </g>
+                                    <g class="jeepney-marker" transform="translate(280,245)">
+                                        <circle cx="0" cy="0" r="8" fill="#F59E0B"/>
+                                        <circle cx="0" cy="0" r="4" fill="white"/>
+                                        <text x="0" y="25" text-anchor="middle" class="text-xs font-semibold fill-yellow-600">Route 3</text>
+                                    </g>
+                                </svg>
+                                
+                                <!-- Floating Info Cards -->
+                                <div class="absolute top-4 left-4 bg-white rounded-xl p-3 shadow-soft max-w-32">
+                                    <div class="flex items-center mb-1">
+                                        <div class="w-3 h-3 bg-primary rounded-full mr-2"></div>
+                                        <span class="text-sm font-semibold text-gray-900">Route 1</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600">2 vehicles active</p>
+                                    <p class="text-xs text-green-600">• Online</p>
+                                </div>
+                                
+                                <div class="absolute top-4 right-4 bg-white rounded-xl p-3 shadow-soft max-w-32">
+                                    <div class="flex items-center mb-1">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                        <span class="text-sm font-semibold text-gray-900">Route 2</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600">3 vehicles active</p>
+                                    <p class="text-xs text-green-600">• Online</p>
+                                </div>
+                                
+                                <div class="absolute bottom-4 left-4 bg-white rounded-xl p-3 shadow-soft max-w-36">
+                                    <div class="flex items-center mb-1">
+                                        <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                                        <span class="text-sm font-semibold text-gray-900">Route 3</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600">1 vehicle active</p>
+                                    <p class="text-xs text-green-600">• Online</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Map Controls -->
+                        <div class="absolute bottom-4 right-4 flex flex-col space-y-2">
+                            <button class="bg-white rounded-lg p-2 shadow-soft hover:shadow-soft-lg transition-shadow">
+                                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                </svg>
+                            </button>
+                            <button class="bg-white rounded-lg p-2 shadow-soft hover:shadow-soft-lg transition-shadow">
+                                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Live Indicator -->
+                        <div class="absolute top-4 left-1/2 transform -translate-x-1/2">
+                            <div class="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                                <div class="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+                                LIVE
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                </div>
+
+                <!-- Features List -->
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-900 mb-6">Smart Tracking Features</h3>
+                        <div class="space-y-6">
+                            <div class="flex items-start">
+                                <div class="bg-primary/10 rounded-xl p-3 mr-4">
+                                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-900 mb-2">Real-Time GPS Tracking</h4>
+                                    <p class="text-gray-600">Track jeepneys in real-time with accurate GPS positioning powered by OpenRouteService technology.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-green-100 rounded-xl p-3 mr-4">
+                                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-900 mb-2">Arrival Predictions</h4>
+                                    <p class="text-gray-600">Get accurate arrival time estimates based on current traffic conditions and route data.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-purple-100 rounded-xl p-3 mr-4">
+                                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H9z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-900 mb-2">Route Analytics</h4>
+                                    <p class="text-gray-600">Access detailed analytics about route performance, passenger volume, and service reliability.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SDG Impact Section -->
+    <section id="sdg-impact" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">Supporting UN Sustainable Development Goals</h2>
+                <div class="section-divider h-px w-20 mx-auto mb-8"></div>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                    Abang contributes to multiple UN SDGs by modernizing public transportation and creating positive social impact.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                <!-- SDG 9: Industry, Innovation and Infrastructure -->
+                <div class="rounded-3xl p-6 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-2" style="background-color: #FD6925;">
+                    <div class="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center p-2">
+                        <img src="img/sdg/9.jpg" alt="SDG 9 Logo" class="w-full h-full object-contain">
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-3">Industry, Innovation & Infrastructure</h3>
+                    <p class="text-white text-sm leading-relaxed mb-4">
+                        Modernizing jeepney transportation through innovative GPS tracking technology and digital infrastructure.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-1">
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Innovation</span>
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Infrastructure</span>
+                    </div>
+                </div>
+
+                <!-- SDG 11: Sustainable Cities and Communities -->
+                <div class="rounded-3xl p-6 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-2" style="background-color: #FD9D24;">
+                    <div class="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center p-2">
+                        <img src="img/sdg/11.jpg" alt="SDG 11 Logo" class="w-full h-full object-contain">
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-3">Sustainable Cities & Communities</h3>
+                    <p class="text-white text-sm leading-relaxed mb-4">
+                        Creating more efficient and sustainable urban transportation systems for Filipino communities.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-1">
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Urban Planning</span>
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Sustainability</span>
+                    </div>
+                </div>
+
+                <!-- SDG 8: Decent Work and Economic Growth -->
+                <div class="rounded-3xl p-6 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-2" style="background-color: #A21942;">
+                    <div class="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center p-2">
+                        <img src="img/sdg/8.jpg" alt="SDG 8 Logo" class="w-full h-full object-contain">
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-3">Decent Work & Economic Growth</h3>
+                    <p class="text-white text-sm leading-relaxed mb-4">
+                        Supporting jeepney drivers and cooperatives with tools to improve efficiency and increase income.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-1">
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Employment</span>
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Economic Growth</span>
+                    </div>
+                </div>
+
+                <!-- SDG 3: Good Health and Well-being -->
+                <div class="rounded-3xl p-6 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-2" style="background-color: #4C9F38;">
+                    <div class="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center p-2">
+                        <img src="img/sdg/3.jpg" alt="SDG 3 Logo" class="w-full h-full object-contain">
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-3">Good Health & Well-being</h3>
+                    <p class="text-white text-sm leading-relaxed mb-4">
+                        Reducing commuter stress and improving road safety through predictable and reliable transportation.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-1">
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Mental Health</span>
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Safety</span>
+                    </div>
+                </div>
+
+                <!-- SDG 10: Reduced Inequalities -->
+                <div class="rounded-3xl p-6 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-2" style="background-color: #DD1367;">
+                    <div class="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center p-2">
+                        <img src="img/sdg/10.jpg" alt="SDG 10 Logo" class="w-full h-full object-contain">
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-3">Reduced Inequalities</h3>
+                    <p class="text-white text-sm leading-relaxed mb-4">
+                        Making quality transportation accessible to all socioeconomic levels through affordable public transit.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-1">
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Accessibility</span>
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Inclusion</span>
+                    </div>
+                </div>
+
+                <!-- SDG 17: Partnerships for the Goals -->
+                <div class="rounded-3xl p-6 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-2" style="background-color: #19486A;">
+                    <div class="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center p-2">
+                        <img src="img/sdg/17.jpg" alt="SDG 17 Logo" class="w-full h-full object-contain">
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-3">Partnerships for the Goals</h3>
+                    <p class="text-white text-sm leading-relaxed mb-4">
+                        Collaborating with cooperatives like SJJDO to achieve sustainable development through partnerships.
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-1">
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Collaboration</span>
+                        <span class="px-2 py-1 bg-white/20 text-white rounded-full text-xs">Partnerships</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Impact Summary -->
+            <div class="mt-16 bg-white rounded-3xl p-8 shadow-soft max-w-4xl mx-auto text-center">
+                <h3 class="text-2xl font-semibold text-gray-900 mb-4">Our Commitment to Sustainable Development</h3>
+                <p class="text-gray-600 leading-relaxed mb-6">
+                    By modernizing public transportation in the Philippines, Abang directly contributes to building more 
+                    sustainable, inclusive, and efficient cities while supporting the livelihoods of transportation workers.
+                </p>
+           
+            </div>
+        </div>
+    </section>
+
+    <!-- Team Section -->
+    <section id="team" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Team Skeleton Loading -->
+            <div id="team-skeleton" class="animate-pulse">
+                <div class="text-center mb-16">
+                    <div class="skeleton skeleton-text large w-64 mx-auto mb-6"></div>
+                    <div class="skeleton h-px w-20 mx-auto mb-8"></div>
+                    <div class="skeleton skeleton-text w-96 mx-auto mb-2"></div>
+                    <div class="skeleton skeleton-text w-80 mx-auto"></div>
+                </div>
+                
+                <!-- Adviser Skeleton -->
+                <div class="mb-16">
+                    <div class="skeleton skeleton-text large w-48 mx-auto mb-10"></div>
+                    <div class="flex justify-center mb-12">
+                        <div class="bg-white rounded-3xl p-8 shadow-soft max-w-sm">
+                            <div class="skeleton skeleton-circle w-24 h-24 mx-auto mb-6"></div>
+                            <div class="skeleton skeleton-text large w-32 mx-auto mb-2"></div>
+                            <div class="skeleton skeleton-text small w-24 mx-auto mb-4"></div>
+                            <div class="skeleton skeleton-text w-full mb-2"></div>
+                            <div class="skeleton skeleton-text w-3/4 mx-auto"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="skeleton skeleton-text large w-40 mx-auto mb-10"></div>
+                    <div class="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+                        <div class="bg-white rounded-3xl p-6 shadow-soft">
+                            <div class="skeleton skeleton-circle w-20 h-20 mx-auto mb-4"></div>
+                            <div class="skeleton skeleton-text w-32 mx-auto mb-2"></div>
+                            <div class="skeleton skeleton-text small w-20 mx-auto mb-3"></div>
+                            <div class="skeleton skeleton-text w-full mb-1"></div>
+                            <div class="skeleton skeleton-text w-3/4 mx-auto"></div>
+                        </div>
+                        <div class="bg-white rounded-3xl p-6 shadow-soft">
+                            <div class="skeleton skeleton-circle w-20 h-20 mx-auto mb-4"></div>
+                            <div class="skeleton skeleton-text w-28 mx-auto mb-2"></div>
+                            <div class="skeleton skeleton-text small w-24 mx-auto mb-3"></div>
+                            <div class="skeleton skeleton-text w-full mb-1"></div>
+                            <div class="skeleton skeleton-text w-4/5 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Developers Skeleton -->
+                <div>
+                    <div class="skeleton skeleton-text large w-44 mx-auto mb-10"></div>
+                    <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                        <div class="bg-white rounded-3xl p-8 shadow-soft">
+                            <div class="skeleton skeleton-circle w-24 h-24 mx-auto mb-6"></div>
+                            <div class="skeleton skeleton-text large w-32 mx-auto mb-2"></div>
+                            <div class="skeleton skeleton-text small w-24 mx-auto mb-4"></div>
+                            <div class="skeleton skeleton-text w-full mb-2"></div>
+                            <div class="skeleton skeleton-text w-3/4 mx-auto mb-4"></div>
+                            <div class="flex justify-center space-x-2">
+                                <div class="skeleton w-16 h-6 rounded-full"></div>
+                                <div class="skeleton w-14 h-6 rounded-full"></div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-3xl p-8 shadow-soft">
+                            <div class="skeleton skeleton-circle w-24 h-24 mx-auto mb-6"></div>
+                            <div class="skeleton skeleton-text large w-28 mx-auto mb-2"></div>
+                            <div class="skeleton skeleton-text small w-28 mx-auto mb-4"></div>
+                            <div class="skeleton skeleton-text w-full mb-2"></div>
+                            <div class="skeleton skeleton-text w-4/5 mx-auto mb-4"></div>
+                            <div class="flex justify-center space-x-2">
+                                <div class="skeleton w-12 h-6 rounded-full"></div>
+                                <div class="skeleton w-16 h-6 rounded-full"></div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-3xl p-8 shadow-soft">
+                            <div class="skeleton skeleton-circle w-24 h-24 mx-auto mb-6"></div>
+                            <div class="skeleton skeleton-text large w-30 mx-auto mb-2"></div>
+                            <div class="skeleton skeleton-text small w-32 mx-auto mb-4"></div>
+                            <div class="skeleton skeleton-text w-full mb-2"></div>
+                            <div class="skeleton skeleton-text w-5/6 mx-auto mb-4"></div>
+                            <div class="flex justify-center space-x-2">
+                                <div class="skeleton w-18 h-6 rounded-full"></div>
+                                <div class="skeleton w-12 h-6 rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actual Team Content -->
+            <div id="team-content" class="hidden">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">Meet Our Team</h2>
+                    <div class="section-divider h-px w-20 mx-auto mb-8"></div>
+                    <p class="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                        The dedicated individuals behind Abang, working together to revolutionize public transportation.
+                    </p>
+                </div>
+
+            <!-- Capstone Adviser and Panel Members (Commented Out) -->
+            <!-- 
+            <div class="mb-16">
+                <h3 class="text-2xl font-semibold text-gray-900 text-center mb-10">Capstone Adviser</h3>
+                <div class="flex justify-center mb-12">
+                    <div class="bg-white rounded-3xl p-8 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-1 max-w-sm">
+                        <div class="w-24 h-24 bg-gradient-to-br from-primary to-blue-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                            <span class="text-white font-bold text-2xl">CA</span>
+                        </div>
+                        <h4 class="text-xl font-semibold text-gray-900 mb-2">Adviser Name</h4>
+                        <p class="text-primary font-medium text-sm mb-4">Capstone Adviser</p>
+                        <p class="text-gray-500 text-sm leading-relaxed">Project guidance, research supervision, and academic mentorship for the Abang development team</p>
+                    </div>
+                </div>
+
+                <h3 class="text-2xl font-semibold text-gray-900 text-center mb-10">Panel Members</h3>
+                <div class="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+                    <div class="bg-white rounded-3xl p-6 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-1">
+                        <div class="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                            <span class="text-white font-bold text-xl">CP</span>
+                        </div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">Panel Chair Name</h4>
+                        <p class="text-emerald-600 font-medium text-sm mb-3">Panel Chair</p>
+                        <p class="text-gray-500 text-sm">Leads the evaluation panel and oversees the assessment process</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-3xl p-6 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-1">
+                        <div class="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                            <span class="text-white font-bold text-xl">PC</span>
+                        </div>
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">Critic Name</h4>
+                        <p class="text-orange-600 font-medium text-sm mb-3">Panel Critic</p>
+                        <p class="text-gray-500 text-sm">Provides technical evaluation and constructive feedback on the project</p>
+                    </div>
+                </div>
+            </div>
+            -->
+
+            <!-- Developers -->
+            <div>
+                <h3 class="text-2xl font-semibold text-gray-900 text-center mb-10">Development Team</h3>
+                <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                    <div class="bg-white rounded-3xl p-8 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-1">
+                        <div class="w-24 h-24 bg-gradient-to-br from-primary to-blue-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                            <span class="text-white font-bold text-2xl">D1</span>
+                        </div>
+                        <h4 class="text-xl font-semibold text-gray-900 mb-2">Developer Name</h4>
+                        <p class="text-primary font-medium text-sm mb-4">Lead Developer</p>
+                        <p class="text-gray-500 text-sm leading-relaxed">Full-stack development, system architecture, and project coordination</p>
+                        <div class="flex justify-center space-x-2 mt-4">
+                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">React Native</span>
+                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">Node.js</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-3xl p-8 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-1">
+                        <div class="w-24 h-24 bg-gradient-to-br from-orange-400 to-red-500 rounded-full mx-auto mb-6 flex items-center justify-center">
+                            <span class="text-white font-bold text-2xl">D2</span>
+                        </div>
+                        <h4 class="text-xl font-semibold text-gray-900 mb-2">Developer Name</h4>
+                        <p class="text-primary font-medium text-sm mb-4">Frontend Developer</p>
+                        <p class="text-gray-500 text-sm leading-relaxed">User interface design, user experience, and mobile app development</p>
+                        <div class="flex justify-center space-x-2 mt-4">
+                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">UI/UX</span>
+                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">React</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-3xl p-8 shadow-soft text-center hover:shadow-soft-lg transition-all transform hover:-translate-y-1">
+                        <div class="w-24 h-24 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-full mx-auto mb-6 flex items-center justify-center">
+                            <span class="text-white font-bold text-2xl">D3</span>
+                        </div>
+                        <h4 class="text-xl font-semibold text-gray-900 mb-2">Developer Name</h4>
+                        <p class="text-primary font-medium text-sm mb-4">Backend Developer</p>
+                        <p class="text-gray-500 text-sm leading-relaxed">Database management, API development, and real-time tracking systems</p>
+                        <div class="flex justify-center space-x-2 mt-4">
+                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">Database</span>
+                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">APIs</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section id="download" class="py-20 bg-gradient-to-r from-primary to-blue-600">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <img src="img/logo/logo.png" alt="Abang Logo" class="w-24 h-24 rounded-3xl mx-auto mb-8 shadow-soft-lg">
+            <h2 class="text-4xl sm:text-5xl font-bold text-white mb-6">Ready to Transform Your Commute?</h2>
+            <p class="text-xl text-blue-100 mb-10 max-w-2xl mx-auto leading-relaxed">
+                Join thousands of commuters who have already made their daily travel predictable and stress-free with Abang.
+            </p>
+            
+            <div class="flex justify-center">
+                <a href="" target="_blank" rel="noopener noreferrer" class="bg-white text-primary px-8 py-4 rounded-2xl font-semibold text-lg inline-flex items-center shadow-soft-lg hover:bg-gray-50 transition-all transform hover:-translate-y-1 hover:shadow-soft-xl">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Download Abang
+                </a>
+            </div>
+            
+            <p class="text-blue-200 mt-8 text-sm">
+                Available now via Expo. Download and install directly on your device.
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center mb-4 md:mb-0">
+                    <img src="img/logo/logo.png" alt="Abang Logo" class="w-8 h-8 rounded-xl mr-3">
+                    <span class="text-lg font-semibold text-gray-900">Abang</span>
+                </div>
+                <div class="flex space-x-6 text-sm text-gray-600">
+                    <a href="#" class="hover:text-primary transition-colors">Privacy Policy</a>
+                    <a href="#" class="hover:text-primary transition-colors">Terms of Service</a>
+                    <a href="#" class="hover:text-primary transition-colors">Contact Us</a>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t border-gray-200 text-center text-gray-500 text-sm">
+                <p>&copy; 2025 Abang. Making public transportation predictable for everyone.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Skeleton Loading JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simulate loading time for demonstration
+            const loadingTime = 2000; // 2 seconds
+            
+            // Show skeleton initially, hide content
+            const teamSkeleton = document.getElementById('team-skeleton');
+            const teamContent = document.getElementById('team-content');
+            
+            // Simulate content loading
+            setTimeout(() => {
+                // Hide skeleton with fade out
+                teamSkeleton.style.opacity = '0';
+                teamSkeleton.style.transition = 'opacity 0.3s ease-out';
+                
+                setTimeout(() => {
+                    teamSkeleton.classList.add('hidden');
+                    teamContent.classList.remove('hidden');
+                    teamContent.classList.add('content-loaded');
+                }, 300);
+            }, loadingTime);
+            
+            // Add skeleton loading for images
+            const images = document.querySelectorAll('img');
+            images.forEach(img => {
+                if (!img.complete) {
+                    // Create skeleton placeholder
+                    const skeleton = document.createElement('div');
+                    skeleton.className = 'skeleton';
+                    skeleton.style.width = img.style.width || img.getAttribute('width') || '100%';
+                    skeleton.style.height = img.style.height || img.getAttribute('height') || '100px';
+                    skeleton.style.borderRadius = img.className.includes('rounded') ? '1rem' : '0';
+                    
+                    // Insert skeleton before image
+                    img.parentNode.insertBefore(skeleton, img);
+                    img.style.display = 'none';
+                    
+                    // Show image when loaded
+                    img.onload = function() {
+                        skeleton.remove();
+                        img.style.display = 'block';
+                        img.classList.add('content-loaded');
+                    };
+                }
+            });
+            
+            // Add intersection observer for lazy loading effect
+            if ('IntersectionObserver' in window) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('content-loaded');
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                });
+                
+                // Observe all sections
+                const sections = document.querySelectorAll('section');
+                sections.forEach(section => {
+                    observer.observe(section);
+                });
+            }
+            
+            // Smooth scrolling for navigation links
+            const navLinks = document.querySelectorAll('a[href^="#"]');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetSection = document.querySelector(targetId);
+                    if (targetSection) {
+                        targetSection.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+            
+            // OpenRouteService Configuration
+            const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjhlNGQyZjBiMDg1YzViMzE3MGNmYmUzMzg2ZDViZDgyNmQ5Y2Y4Yjg0ODdlNTY2NTcyYWMwNzcwIiwiaCI6Im11cm11cjY0In0=';
+            
+            // Convert coordinates: 15°45'23.4"N 120°57'11.0"E
+            const TARGET_LAT = 15 + (45/60) + (23.4/3600); // 15.7565
+            const TARGET_LNG = 120 + (57/60) + (11.0/3600); // 120.9530556
+            
+            // Map Demo Functionality with Real OpenRouteService
+            const initMapDemo = () => {
+                const mapSkeleton = document.getElementById('map-skeleton');
+                const mapDemoOverlay = document.getElementById('map-demo-overlay');
+                const mapContainer = document.getElementById('openroute-map');
+                
+                // Show skeleton loading
+                setTimeout(() => {
+                    try {
+                        // Initialize Leaflet Map
+                        const map = L.map('openroute-map').setView([TARGET_LAT, TARGET_LNG], 13);
+                        
+                        // Add OpenStreetMap tiles
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            maxZoom: 19,
+                            attribution: '© OpenStreetMap contributors'
+                        }).addTo(map);
+                        
+                        // Custom Driver Icon using your image
+                        const driverIcon = L.icon({
+                            iconUrl: 'img/driver.png',
+                            iconSize: [40, 40],
+                            iconAnchor: [20, 20],
+                            popupAnchor: [0, -20],
+                            className: 'custom-driver-marker'
+                        });
+                        
+                        // Add main marker at specified coordinates
+                        const mainMarker = L.marker([TARGET_LAT, TARGET_LNG], {icon: driverIcon})
+                            .addTo(map)
+                            .bindPopup(`
+                                <div class="text-center p-2">
+                                    <h3 class="font-semibold text-primary mb-2">Abang Jeepney</h3>
+                                    <p class="text-sm text-gray-600 mb-1">Route: San Jose-Cabanatuan Via Munoz Talavera</p>
+                                    <p class="text-xs text-gray-500">Coordinates: ${TARGET_LAT.toFixed(4)}°N, ${TARGET_LNG.toFixed(4)}°E</p>
+                                    <div class="mt-2 flex items-center justify-center">
+                                        <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                                        <span class="text-xs text-green-600 font-medium">ONLINE</span>
+                                    </div>
+                                </div>
+                            `);
+                        
+                        // Add some additional demo markers nearby
+                        const demoMarkers = [
+                            {lat: TARGET_LAT + 0.01, lng: TARGET_LNG - 0.01, route: "Route A", status: "online"},
+                            {lat: TARGET_LAT - 0.008, lng: TARGET_LNG + 0.012, route: "Route B", status: "online"},
+                            {lat: TARGET_LAT + 0.005, lng: TARGET_LNG + 0.008, route: "Route C", status: "delayed"}
+                        ];
+                        
+                        demoMarkers.forEach((markerData, index) => {
+                            const isOnline = markerData.status === 'online';
+                            const demoIcon = L.divIcon({
+                                className: 'custom-jeepney-marker',
+                                html: `
+                                    <div class="bg-${isOnline ? 'green' : 'yellow'}-500 rounded-full w-6 h-6 flex items-center justify-center shadow-lg border-2 border-white">
+                                        <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M18.92,2.01C18.72,1.42 18.16,1 17.5,1H6.5C5.84,1 5.28,1.42 5.08,2.01L3,8V16A2,2 0 0,0 5,18H6A2,2 0 0,0 8,16V15H16V16A2,2 0 0,0 18,18H19A2,2 0 0,0 21,16V8L18.92,2.01M6.5,12A1.5,1.5 0 0,1 5,10.5A1.5,1.5 0 0,1 6.5,9A1.5,1.5 0 0,1 8,10.5A1.5,1.5 0 0,1 6.5,12M17.5,12A1.5,1.5 0 0,1 16,10.5A1.5,1.5 0 0,1 17.5,9A1.5,1.5 0 0,1 19,10.5A1.5,1.5 0 0,1 17.5,12Z"/>
+                                        </svg>
+                                    </div>
+                                `,
+                                iconSize: [24, 24],
+                                iconAnchor: [12, 12]
+                            });
+                            
+                            L.marker([markerData.lat, markerData.lng], {icon: demoIcon})
+                                .addTo(map)
+                                .bindPopup(`
+                                    <div class="text-center p-2">
+                                        <h3 class="font-semibold mb-1">${markerData.route}</h3>
+                                        <p class="text-xs text-gray-500 mb-2">${markerData.lat.toFixed(4)}°N, ${markerData.lng.toFixed(4)}°E</p>
+                                        <div class="flex items-center justify-center">
+                                            <div class="w-2 h-2 bg-${isOnline ? 'green' : 'yellow'}-500 rounded-full mr-2 ${isOnline ? 'animate-pulse' : ''}"></div>
+                                            <span class="text-xs ${isOnline ? 'text-green-600' : 'text-yellow-600'} font-medium uppercase">${markerData.status}</span>
+                                        </div>
+                                    </div>
+                                `);
+                        });
+                        
+                        // Add route line using OpenRouteService
+                        const routeCoordinates = [
+                            [TARGET_LNG, TARGET_LAT], // Note: ORS uses [lng, lat] format
+                            [TARGET_LNG + 0.02, TARGET_LAT + 0.01],
+                            [TARGET_LNG - 0.01, TARGET_LAT + 0.015]
+                        ];
+                        
+                        // Fetch route from OpenRouteService
+                        fetch(`https://api.openrouteservice.org/v2/directions/driving-car`, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+                                'Authorization': ORS_API_KEY,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                coordinates: routeCoordinates
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.features && data.features[0]) {
+                                const routeCoords = data.features[0].geometry.coordinates.map(coord => [coord[1], coord[0]]); // Convert to [lat, lng]
+                                L.polyline(routeCoords, {
+                                    color: '#007AFF',
+                                    weight: 4,
+                                    opacity: 0.7
+                                }).addTo(map);
+                            }
+                        })
+                        .catch(error => {
+                            console.log('Using fallback route visualization');
+                            // Fallback route line
+                            L.polyline([
+                                [TARGET_LAT, TARGET_LNG],
+                                [TARGET_LAT + 0.01, TARGET_LNG + 0.02],
+                                [TARGET_LAT + 0.015, TARGET_LNG - 0.01]
+                            ], {
+                                color: '#007AFF',
+                                weight: 4,
+                                opacity: 0.7
+                            }).addTo(map);
+                        });
+                        
+                        // Hide skeleton and show map
+                        mapSkeleton.style.opacity = '0';
+                        setTimeout(() => {
+                            mapSkeleton.classList.add('hidden');
+                            mapContainer.classList.remove('hidden');
+                            mapContainer.classList.add('content-loaded');
+                            
+                            // Trigger map resize after animation
+                            setTimeout(() => {
+                                map.invalidateSize();
+                            }, 100);
+                        }, 300);
+                        
+                    } catch (error) {
+                        console.error('Map initialization failed:', error);
+                        // Fallback to demo overlay
+                        mapSkeleton.style.opacity = '0';
+                        setTimeout(() => {
+                            mapSkeleton.classList.add('hidden');
+                            mapDemoOverlay.classList.remove('hidden');
+                        }, 300);
+                    }
+                }, 1500);
+            };
+            
+            // Initialize map demo when section comes into view
+            const mapSection = document.getElementById('map-demo');
+            if (mapSection) {
+                const mapObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            initMapDemo();
+                            mapObserver.unobserve(entry.target);
+                        }
+                    });
+                });
+                mapObserver.observe(mapSection);
+            }
+        });
+        
+        // Add loading state management
+        window.addEventListener('load', function() {
+            // Remove any remaining skeletons after full page load
+            const skeletons = document.querySelectorAll('.skeleton');
+            skeletons.forEach(skeleton => {
+                if (!skeleton.closest('#team-skeleton')) {
+                    skeleton.style.opacity = '0';
+                    setTimeout(() => skeleton.remove(), 300);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
