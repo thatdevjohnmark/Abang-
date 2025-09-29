@@ -239,7 +239,7 @@
                 Never wait in uncertainty again. Abang helps you track modern jeepneys in real-time, 
                 making your daily commute predictable and stress-free.
             </p>
-            <a href="" target="_blank" rel="noopener noreferrer" class="btn-primary text-white px-8 py-4 rounded-2xl font-semibold text-lg inline-flex items-center shadow-soft-lg">
+            <a href="https://expo.dev/accounts/thatdevjohnmark/projects/abang-mobile/builds/1feab4fe-a23b-4a69-a67b-fdf074291782" target="_blank" rel="noopener noreferrer" class="btn-primary text-white px-8 py-4 rounded-2xl font-semibold text-lg inline-flex items-center shadow-soft-lg">
                 Get Abang
                 <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -1057,12 +1057,20 @@
             </p>
             
             <div class="flex justify-center">
-                <a href="" target="_blank" rel="noopener noreferrer" class="bg-white text-primary px-8 py-4 rounded-2xl font-semibold text-lg inline-flex items-center shadow-soft-lg hover:bg-gray-50 transition-all transform hover:-translate-y-1 hover:shadow-soft-xl">
+                <a href="https://expo.dev/accounts/thatdevjohnmark/projects/abang-mobile/builds/1feab4fe-a23b-4a69-a67b-fdf074291782" target="_blank" rel="noopener noreferrer" class="bg-white text-primary px-8 py-4 rounded-2xl font-semibold text-lg inline-flex items-center shadow-soft-lg hover:bg-gray-50 transition-all transform hover:-translate-y-1 hover:shadow-soft-xl">
                     <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                     </svg>
                     Download Abang
                 </a>
+            </div>
+            
+            <!-- QR Code Card -->
+            <div class="mt-10 flex flex-col items-center gap-4">
+                <div class="bg-white rounded-2xl p-4 shadow-soft-lg">
+                    <div id="qr-download" class="w-[180px] h-[180px]"></div>
+                </div>
+                <p class="text-blue-100 text-sm">Scan the QR code to download</p>
             </div>
             
             <p class="text-blue-200 mt-8 text-sm">
@@ -1091,9 +1099,32 @@
         </div>
     </footer>
 
+    <!-- QRCode Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <!-- Skeleton Loading JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Download link used for buttons and QR code
+            const DOWNLOAD_URL = 'https://expo.dev/accounts/thatdevjohnmark/projects/abang-mobile/builds/1feab4fe-a23b-4a69-a67b-fdf074291782';
+
+            // Render QR code if container exists
+            const qrEl = document.getElementById('qr-download');
+            if (qrEl && window.QRCode) {
+                try {
+                    new QRCode(qrEl, {
+                        text: DOWNLOAD_URL,
+                        width: 180,
+                        height: 180,
+                        colorDark: '#111827', // gray-900
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                } catch (e) {
+                    console.warn('QR code generation failed:', e);
+                }
+            }
+
             // Simulate loading time for demonstration
             const loadingTime = 2000; // 2 seconds
             
@@ -1352,6 +1383,8 @@
                 }
             });
         });
+
+
     </script>
 </body>
 </html>
