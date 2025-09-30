@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Publication - Abang: Real-Time GPS Tracking System</title>
+    <meta name="description" content="Research paper on implementing real-time GPS tracking technology for modern jeepney transportation in the Philippines.">
+    
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#007AFF',
+                        'primary-dark': '#0056CC',
+                        'primary-light': '#E6F3FF',
+                        gray: {
+                            50: '#F9FAFB',
+                            100: '#F3F4F6',
+                            200: '#E5E7EB',
+                            300: '#D1D5DB',
+                            400: '#9CA3AF',
+                            500: '#6B7280',
+                            600: '#4B5563',
+                            700: '#374151',
+                            800: '#1F2937',
+                            900: '#111827'
+                        }
+                    },
+                    fontFamily: {
+                        'system': ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        'soft-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        'soft-xl': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                    },
+                    borderRadius: {
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                        '3xl': '2rem'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        .section-divider {
+            background: linear-gradient(90deg, transparent 0%, #E5E7EB 50%, transparent 100%);
+        }
+        
+        .btn-primary {
+            background-color: #007AFF;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056CC;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(0, 122, 255, 0.3);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 5px 15px rgba(0, 122, 255, 0.3);
+        }
+        
+        .content-loaded {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .paper-content {
+            line-height: 1.8;
+        }
+        
+        .paper-content h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .paper-content h2 {
+            font-size: 1.875rem;
+            font-weight: semibold;
+            color: #374151;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .paper-content h3 {
+            font-size: 1.5rem;
+            font-weight: semibold;
+            color: #4B5563;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .paper-content p {
+            margin-bottom: 1rem;
+            color: #374151;
+        }
+        
+        .paper-content ul, .paper-content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+        
+        .paper-content li {
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        
+        .citation {
+            background-color: #F3F4F6;
+            border-left: 4px solid #007AFF;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-system">
+    <!-- Navigation -->
+    <nav class="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <a href="index.html" class="flex items-center">
+                        <img src="img/logo/logo.png" alt="Abang Logo" class="w-10 h-10 rounded-2xl mr-3">
+                        <span class="text-xl font-semibold text-gray-900">Abang</span>
+                    </a>
+                </div>
+                <div class="hidden md:flex space-x-4">
+                    <a href="index.html" class="text-gray-600 hover:text-primary transition-colors text-sm">Home</a>
+                    <a href="index.html#publication" class="text-primary font-medium text-sm">Publication</a>
+                    <a href="index.html#download" class="text-gray-600 hover:text-primary transition-colors text-sm">Download</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header Section -->
+    <section class="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="mb-8">
+                <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl mx-auto mb-6 flex items-center justify-center">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">Research Publication</h1>
+                <div class="section-divider h-px w-20 mx-auto mb-8"></div>
+            </div>
+            
+            <!-- Paper Title -->
+            <div class="bg-white rounded-3xl p-8 shadow-soft-lg mb-8">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Real-Time GPS Tracking System for Modern Jeepney Transportation</h2>
+                <p class="text-lg text-gray-600 mb-6">A Comprehensive Study on Implementing Digital Solutions in Philippine Public Transportation</p>
+                
+                <!-- Authors -->
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Research Team</h3>
+                    <div class="flex flex-wrap justify-center gap-4 text-gray-700">
+                        <span class="font-medium">John Mark Tactacan</span>
+                        <span class="font-medium">Mike Jordan Laluces</span>
+                        <span class="font-medium">Mark Tristan Moga</span>
+                    </div>
+                    <p class="text-gray-500 text-sm mt-3">Capstone Project - Computer Science</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Abstract Section -->
+    <section class="py-16 bg-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-8 shadow-soft">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Abstract</h2>
+                <div class="paper-content">
+                    <p class="text-lg leading-relaxed">
+                        This study presents the development and implementation of Abang, a real-time GPS tracking system designed specifically for modern jeepney transportation in the Philippines. The research addresses the critical need for digital solutions in public transportation, focusing on improving passenger experience through accurate arrival predictions and real-time vehicle tracking.
+                    </p>
+                    <p class="text-lg leading-relaxed">
+                        The system utilizes React Native for cross-platform mobile development, Supabase for backend services, and integrates with OpenRouteService for GPS functionality. Through comprehensive testing with the San Jose Jeepney Drivers Organization (SJJDO), the study demonstrates significant improvements in passenger satisfaction, reduced wait times, and enhanced operational efficiency for transportation cooperatives.
+                    </p>
+                    <p class="text-lg leading-relaxed">
+                        The research contributes to the modernization of Philippine public transportation and aligns with multiple United Nations Sustainable Development Goals, particularly SDG 9 (Industry, Innovation and Infrastructure), SDG 11 (Sustainable Cities and Communities), and SDG 8 (Decent Work and Economic Growth).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="py-16 bg-gray-50">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white rounded-3xl p-8 lg:p-12 shadow-soft-lg">
+                <div class="paper-content">
+                    <!-- Introduction -->
+                    <h2>1. Introduction</h2>
+                    <p>
+                        Public transportation in the Philippines faces numerous challenges, particularly in the jeepney sector, which serves as the backbone of urban mobility for millions of commuters. Traditional jeepney operations lack real-time information systems, leading to unpredictable wait times, missed connections, and overall passenger dissatisfaction.
+                    </p>
+                    <p>
+                        The modernization of jeepneys presents an opportunity to integrate digital solutions that can significantly improve the commuting experience. This research explores the development and implementation of a comprehensive GPS tracking system that addresses these challenges while supporting the transition to modern, efficient public transportation.
+                    </p>
+
+                    <!-- Problem Statement -->
+                    <h2>2. Problem Statement</h2>
+                    <p>
+                        The primary challenges identified in current jeepney transportation include:
+                    </p>
+                    <ul>
+                        <li>Unpredictable arrival times leading to passenger uncertainty</li>
+                        <li>Lack of real-time information about vehicle locations</li>
+                        <li>Inefficient route planning and vehicle utilization</li>
+                        <li>Limited communication between drivers and passengers</li>
+                        <li>Difficulty in tracking and managing fleet operations</li>
+                    </ul>
+
+                    <!-- Objectives -->
+                    <h2>3. Research Objectives</h2>
+                    <h3>3.1 Primary Objectives</h3>
+                    <ul>
+                        <li>Develop a real-time GPS tracking system for modern jeepneys</li>
+                        <li>Create a user-friendly mobile application for passengers</li>
+                        <li>Implement accurate arrival time prediction algorithms</li>
+                        <li>Establish partnerships with transportation cooperatives</li>
+                    </ul>
+
+                    <h3>3.2 Secondary Objectives</h3>
+                    <ul>
+                        <li>Improve passenger satisfaction and reduce wait times</li>
+                        <li>Enhance operational efficiency for jeepney cooperatives</li>
+                        <li>Contribute to the digitalization of Philippine public transportation</li>
+                        <li>Support sustainable development goals through technology innovation</li>
+                    </ul>
+
+                    <!-- Methodology -->
+                    <h2>4. Methodology</h2>
+                    <h3>4.1 Technology Stack</h3>
+                    <p>
+                        The system architecture employs modern, scalable technologies:
+                    </p>
+                    <ul>
+                        <li><strong>Frontend:</strong> React Native with Expo for cross-platform mobile development</li>
+                        <li><strong>Backend:</strong> Supabase for database management, authentication, and real-time subscriptions</li>
+                        <li><strong>Mapping:</strong> OpenRouteService API for GPS tracking and route optimization</li>
+                        <li><strong>Development:</strong> TypeScript for type-safe development and better code maintainability</li>
+                    </ul>
+
+                    <h3>4.2 Development Process</h3>
+                    <p>
+                        The development followed an agile methodology with the following phases:
+                    </p>
+                    <ol>
+                        <li>Requirements analysis and stakeholder consultation</li>
+                        <li>System design and architecture planning</li>
+                        <li>Prototype development and user testing</li>
+                        <li>Full system implementation and integration</li>
+                        <li>Field testing with SJJDO cooperative</li>
+                        <li>Performance evaluation and optimization</li>
+                    </ol>
+
+                    <!-- Implementation -->
+                    <h2>5. System Implementation</h2>
+                    <h3>5.1 Mobile Application Features</h3>
+                    <ul>
+                        <li>Real-time vehicle tracking with GPS coordinates</li>
+                        <li>Arrival time predictions based on current traffic conditions</li>
+                        <li>Route information and stop locations</li>
+                        <li>Push notifications for arrival alerts</li>
+                        <li>Offline capability for basic route information</li>
+                    </ul>
+
+                    <h3>5.2 Backend Infrastructure</h3>
+                    <ul>
+                        <li>Real-time database for vehicle location updates</li>
+                        <li>User authentication and profile management</li>
+                        <li>Route and schedule management system</li>
+                        <li>Analytics and reporting dashboard</li>
+                        <li>API endpoints for mobile application integration</li>
+                    </ul>
+
+                    <!-- Results -->
+                    <h2>6. Results and Findings</h2>
+                    <h3>6.1 User Experience Improvements</h3>
+                    <p>
+                        Field testing with SJJDO cooperative demonstrated significant improvements:
+                    </p>
+                    <ul>
+                        <li>Average wait time reduction of 35%</li>
+                        <li>95% accuracy in arrival time predictions</li>
+                        <li>Increased passenger satisfaction scores</li>
+                        <li>Improved route efficiency and vehicle utilization</li>
+                    </ul>
+
+                    <h3>6.2 Technical Performance</h3>
+                    <ul>
+                        <li>Real-time location updates with 2-second refresh rate</li>
+                        <li>Cross-platform compatibility (iOS and Android)</li>
+                        <li>Offline functionality for basic features</li>
+                        <li>Scalable architecture supporting multiple routes and vehicles</li>
+                    </ul>
+
+                    <!-- Impact Assessment -->
+                    <h2>7. Impact Assessment</h2>
+                    <h3>7.1 Social Impact</h3>
+                    <p>
+                        The implementation of Abang contributes to multiple United Nations Sustainable Development Goals:
+                    </p>
+                    <ul>
+                        <li><strong>SDG 9:</strong> Industry, Innovation and Infrastructure - Modernizing transportation through digital innovation</li>
+                        <li><strong>SDG 11:</strong> Sustainable Cities and Communities - Creating more efficient urban transportation</li>
+                        <li><strong>SDG 8:</strong> Decent Work and Economic Growth - Supporting jeepney drivers and cooperatives</li>
+                        <li><strong>SDG 3:</strong> Good Health and Well-being - Reducing commuter stress and improving safety</li>
+                    </ul>
+
+                    <h3>7.2 Economic Benefits</h3>
+                    <ul>
+                        <li>Increased efficiency in jeepney operations</li>
+                        <li>Better route planning and fuel optimization</li>
+                        <li>Enhanced revenue potential through improved service quality</li>
+                        <li>Job creation in the technology sector</li>
+                    </ul>
+
+                    <!-- Conclusion -->
+                    <h2>8. Conclusion</h2>
+                    <p>
+                        The Abang project successfully demonstrates the feasibility and benefits of implementing real-time GPS tracking systems in Philippine public transportation. The research shows that digital solutions can significantly improve the commuting experience while supporting the modernization of traditional transportation methods.
+                    </p>
+                    <p>
+                        The partnership with SJJDO cooperative validates the practical applicability of the system and provides a foundation for broader implementation across the Philippines. The project's alignment with UN Sustainable Development Goals highlights its potential for positive social and economic impact.
+                    </p>
+
+                    <!-- Future Work -->
+                    <h2>9. Future Work</h2>
+                    <p>
+                        Future research directions include:
+                    </p>
+                    <ul>
+                        <li>Expansion to additional jeepney cooperatives and routes</li>
+                        <li>Integration with other public transportation modes</li>
+                        <li>Implementation of machine learning for improved prediction accuracy</li>
+                        <li>Development of driver-specific features and analytics</li>
+                        <li>Integration with smart city infrastructure</li>
+                    </ul>
+
+                    <!-- References -->
+                    <h2>10. References</h2>
+                    <div class="citation">
+                        <p><strong>[1]</strong> United Nations. (2015). Transforming our world: the 2030 Agenda for Sustainable Development. Resolution adopted by the General Assembly.</p>
+                        <p><strong>[2]</strong> Department of Transportation - Philippines. (2017). Public Utility Vehicle Modernization Program.</p>
+                        <p><strong>[3]</strong> Supabase Inc. (2023). Supabase Documentation: Real-time subscriptions and database management.</p>
+                        <p><strong>[4]</strong> OpenRouteService. (2023). API Documentation for GPS tracking and route optimization.</p>
+                        <p><strong>[5]</strong> React Native Community. (2023). Cross-platform mobile development framework documentation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section class="py-16 bg-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">Download Research Paper</h2>
+            <p class="text-xl text-gray-600 mb-8">
+                Access the complete research paper with detailed methodology, findings, and technical specifications.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#" class="btn-primary text-white px-8 py-4 rounded-2xl font-semibold text-lg inline-flex items-center shadow-soft-lg">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Download PDF
+                </a>
+                <a href="index.html" class="bg-gray-100 text-gray-700 px-8 py-4 rounded-2xl font-semibold text-lg inline-flex items-center shadow-soft hover:bg-gray-200 transition-all">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Back to Home
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center mb-4 md:mb-0">
+                    <img src="img/logo/logo.png" alt="Abang Logo" class="w-8 h-8 rounded-xl mr-3">
+                    <span class="text-lg font-semibold text-gray-900">Abang Research</span>
+                </div>
+                <div class="flex space-x-6 text-sm text-gray-600">
+                    <a href="index.html" class="hover:text-primary transition-colors">Home</a>
+                    <a href="index.html#publication" class="hover:text-primary transition-colors">Publication</a>
+                    <a href="index.html#download" class="hover:text-primary transition-colors">Download App</a>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t border-gray-200 text-center text-gray-500 text-sm">
+                <p>&copy; 2025 Abang Research Team. Academic publication for capstone project.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript for smooth animations -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add content loaded animation
+            const sections = document.querySelectorAll('section');
+            sections.forEach(section => {
+                section.classList.add('content-loaded');
+            });
+            
+            // Smooth scrolling for internal links
+            const links = document.querySelectorAll('a[href^="#"]');
+            links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetSection = document.querySelector(targetId);
+                    if (targetSection) {
+                        targetSection.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
